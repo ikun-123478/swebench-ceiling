@@ -16,6 +16,14 @@ on:
         description: "最大并发 job 数"
         required: true
         default: "20"
+      chain:
+        description: "接力队列（逗号分隔，如 A1_effort_low,A2_effort_max）；留空表示跑完即止"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   plan:
@@ -107,3 +115,27 @@ jobs:
             out/${{ inputs.arm }}/${{ matrix.instance }}/*.traj.json
           if-no-files-found: warn
           retention-days: 14
+
+  # 接力：本 arm 跑完后自动触发队列里的下一个 arm，直到队列为空。
+  # 这样 6 组实验可以无人值守连着跑完。
+  chain:
+    needs: run
+    if: ${{ always() && inputs.chain != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch next arm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHAIN: ${{ inputs.chain }}
+        run: |
+          set -euo pipefail
+          NEXT_ARM="${CHAIN%%,*}"
+          REST=""
+          if [[ "$CHAIN" == *,* ]]; then REST="${CHAIN#*,}"; fi
+          echo "下一个 arm: $NEXT_ARM ; 剩余队列: ${REST:-<空>}"
+          gh api -X POST "repos/${{ github.repository }}/actions/workflows/swebench-agent.yml/dispatches" \
+            -f ref=main \
+            -f "inputs[arm]=$NEXT_ARM" \
+            -f "inputs[subset]=bench/sample_lite36.json" \
+            -f "inputs[parallel]=20" \
+            -f "inputs[chain]=$REST"
