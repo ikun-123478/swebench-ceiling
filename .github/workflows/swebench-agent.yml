@@ -106,7 +106,7 @@ jobs:
             -c "bench/arms/${{ inputs.arm }}.yaml" \
             -w 1 -o "out/${{ inputs.arm }}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: pred-${{ inputs.arm }}-${{ matrix.instance }}
