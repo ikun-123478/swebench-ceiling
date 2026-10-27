@@ -1,0 +1,27 @@
+# SWE-bench Lite + 高强度设置
+#   mini-extra swebench --subset lite --split test --filter "<regex>" \
+#       -c swebench.yaml -c bench/lite_deepseek.yaml -o <dir> -w 2
+#
+# 与上游的差别：
+#   - cost_limit 0（不因花费截断长轨迹）
+#   - pull_timeout 1800（上游 120s 对 ~1GB 的 SWE-bench 镜像不够，会直接 TimeoutExpired）
+#   - run_args 给每个容器限 CPU/内存（共享服务器上必须做，否则并发跑起来会挤别人）
+
+agent:
+  step_limit: 250
+  cost_limit: 0.
+
+environment:
+  environment_class: docker
+  timeout: 60
+  pull_timeout: 1800     # 关键：给镜像拉取留足时间
+  # 每容器 4 核 / 8 GB：对 SWE-bench 的测试执行足够，同时 8 并发也只用 32 核（机器共 768 核）
+  run_args: ["--rm", "--cpus", "4", "--memory", "8g"]
+
+model:
+  model_class: litellm
+  model_name: openai/deepseek-flash
+  cost_tracking: ignore_errors
+  model_kwargs:
+    drop_params: true
+    temperature: 0

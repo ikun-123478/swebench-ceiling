@@ -1,0 +1,6 @@
+# A2 推理链变长：把推理预算顶到 max。
+# 实测（同一题、temperature=0）：low 3,277 reasoning tokens vs max 7,148，两档都 finish=stop。
+model:
+  model_kwargs:
+    extra_body:
+      reasoning_effort: max

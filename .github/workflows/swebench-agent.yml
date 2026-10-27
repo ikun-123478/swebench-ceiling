@@ -1,0 +1,109 @@
+name: swebench-agent
+# 在 GitHub Actions 上跑一个 arm 的全部实例（每实例一个 job，天然并行）。
+# 需要 Secret: OPENAI_API_KEY （以及可选的 OPENAI_BASE_URL）
+on:
+  workflow_dispatch:
+    inputs:
+      arm:
+        description: "bench/arms/<arm>.yaml"
+        required: true
+        default: "A0_baseline"
+      subset:
+        description: "实例清单 json"
+        required: true
+        default: "bench/sample_lite36.json"
+      parallel:
+        description: "最大并发 job 数"
+        required: true
+        default: "20"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      instances: ${{ steps.l.outputs.instances }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: l
+        env:
+          SUBSET: ${{ inputs.subset }}
+        run: |
+          python3 -c "
+          import json, os
+          d = json.load(open(os.environ['SUBSET']))
+          print('instances=' + json.dumps([r['instance_id'] for r in d['rows']]))
+          " >> "$GITHUB_OUTPUT"
+
+  run:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(inputs.parallel) }}
+      matrix:
+        instance: ${{ fromJson(needs.plan.outputs.instances) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # runner 默认只有 ~14GB，删掉预装的大件腾出 ~25GB（matplotlib 这类镜像解压后很占地方）
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          sudo apt-get clean
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install minisweagent
+        run: |
+          pip install -q -e .
+          pip install -q "litellm==1.100.0"
+
+      - name: Pull image
+        env:
+          INSTANCE: ${{ matrix.instance }}
+        run: |
+          set -euo pipefail
+          eval "$(python3 -c "
+          import os
+          iid = os.environ['INSTANCE'].replace('__', '_1776_').lower()
+          print(f'IMG=docker.io/swebench/sweb.eval.x86_64.{iid}:latest')
+          print(f'MIR=docker.1ms.run/swebench/sweb.eval.x86_64.{iid}:latest')
+          ")"
+          echo "IMG=$IMG" >> "$GITHUB_ENV"
+          for i in 1 2 3; do
+            docker pull "$IMG" && break || sleep 10
+          done
+          # 镜像站兜底（Docker Hub 匿名限流时）
+          if ! docker image inspect "$IMG" >/dev/null 2>&1; then
+            docker pull "$MIR" && docker tag "$MIR" "$IMG"
+          fi
+
+      - name: Run agent on ${{ matrix.instance }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          MSWEA_COST_TRACKING: ignore_errors
+          MSWEA_SILENT_STARTUP: "1"
+          HF_ENDPOINT: https://hf-mirror.com
+          LITELLM_LOCAL_MODEL_COST_MAP: "True"
+        run: |
+          set -euo pipefail
+          mini-extra swebench --subset lite --split test \
+            --filter "^${{ matrix.instance }}$" \
+            -c swebench.yaml -c bench/lite_deepseek.yaml \
+            -c "bench/arms/${{ inputs.arm }}.yaml" \
+            -w 1 -o "out/${{ inputs.arm }}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pred-${{ inputs.arm }}-${{ matrix.instance }}
+          path: |
+            out/${{ inputs.arm }}/*.json
+            out/${{ inputs.arm }}/${{ matrix.instance }}/*.traj.json
+          if-no-files-found: warn
+          retention-days: 14

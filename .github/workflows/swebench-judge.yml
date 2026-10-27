@@ -1,0 +1,99 @@
+name: swebench-judge
+# 用官方 harness 判分：每实例一个 job，产出 resolved 报告。
+# 输入 preds 需先提交进仓库（例如 preds/A0_baseline.jsonl）。
+on:
+  workflow_dispatch:
+    inputs:
+      arm:
+        description: "arm 名（用于 run_id 与报告命名）"
+        required: true
+        default: "A0_baseline"
+      preds:
+        description: "仓库内的预测文件路径"
+        required: true
+        default: "preds/A0_baseline.jsonl"
+      subset:
+        description: "实例清单 json"
+        required: true
+        default: "bench/sample_lite36.json"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      instances: ${{ steps.l.outputs.instances }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: l
+        env:
+          SUBSET: ${{ inputs.subset }}
+        run: |
+          python3 -c "
+          import json, os
+          d = json.load(open(os.environ['SUBSET']))
+          print('instances=' + json.dumps([r['instance_id'] for r in d['rows']]))
+          " >> "$GITHUB_OUTPUT"
+
+  judge:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        instance: ${{ fromJson(needs.plan.outputs.instances) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          sudo apt-get clean
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install swebench
+        run: pip install -q swebench
+
+      - name: Fix image presence
+        env:
+          INSTANCE: ${{ matrix.instance }}
+        run: |
+          set -euo pipefail
+          eval "$(python3 -c "
+          import os
+          iid = os.environ['INSTANCE'].replace('__', '_1776_').lower()
+          print(f'IMG=swebench/sweb.eval.x86_64.{iid}:latest')
+          print(f'MIR=docker.1ms.run/swebench/sweb.eval.x86_64.{iid}:latest')
+          ")"
+          for i in 1 2 3; do docker pull "$IMG" && break || sleep 10; done
+          docker image inspect "$IMG" >/dev/null 2>&1 || { docker pull "$MIR" && docker tag "$MIR" "$IMG"; }
+
+      - name: Evaluate ${{ matrix.instance }}
+        env:
+          HF_ENDPOINT: https://hf-mirror.com
+          INSTANCE: ${{ matrix.instance }}
+          PREDS: ${{ inputs.preds }}
+          RUNID: ${{ inputs.arm }}
+        run: |
+          set -euo pipefail
+          python -m swebench.harness.run_evaluation \
+            --dataset_name princeton-nlp/SWE-bench_Lite \
+            --predictions_path "$PREDS" \
+            --instance_ids "$INSTANCE" \
+            --max_workers 1 \
+            --run_id "$RUNID" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: judge-${{ inputs.arm }}-${{ matrix.instance }}
+          path: |
+            *.json
+            logs/
+          if-no-files-found: warn
+          retention-days: 14

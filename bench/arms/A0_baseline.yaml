@@ -1,0 +1,9 @@
+# A0 基线（参照组）：deepseek-flash，默认推理档（high），观测 10k，250 步
+# 所有其它 arm 都与本组配对比较。
+agent:
+  step_limit: 250
+
+model:
+  model_name: openai/deepseek-flash
+  model_kwargs:
+    temperature: 0

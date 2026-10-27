@@ -1,0 +1,17 @@
+# Modal 云沙箱覆盖（本机没有 docker 权限时用这个）
+#
+# 用法：在后面追加 -c bench/modal.yaml
+#   MODAL=1 bash bench/run_arms.sh arm A0_baseline
+#
+# 原理：SwerexModalEnvironmentConfig.image 直接吃 Docker Hub 镜像名，
+# 镜像由 Modal 侧拉取，本机不需要 docker / 不需要 sudo。
+#
+# 注意：lite_deepseek.yaml 里的 pull_timeout / run_args 是 docker 专用字段，
+# Modal 配置类会忽略它们（pydantic extra=ignore，已实测），不会报错。
+
+environment:
+  environment_class: swerex_modal
+  startup_timeout: 900        # 首次要在镜像里装 pipx + 起 swe-rex runtime，给足时间
+  runtime_timeout: 7200       # 单个沙箱最长存活 2h
+  deployment_timeout: 7200
+  install_pipx: true          # swe-rex runtime 需要 pipx；若在 conda 镜像里失败，先跑 smoke 定位

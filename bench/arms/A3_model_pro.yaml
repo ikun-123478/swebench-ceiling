@@ -1,0 +1,4 @@
+# A3 换更强模型：DeepSeek-V4-Pro，其余全同（同 scaffold / 同推理档 / 同步数）。
+# 这是把「模型能力」从 scaffold 与预算里分离出来的唯一干净对照。
+model:
+  model_name: openai/deepseek-v4-pro
