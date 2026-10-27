@@ -1,0 +1,5 @@
+# A3b 换更强模型：DeepSeek-V4-Pro，只跑「flash 判分失败」的实例子集，
+# 用于检验「更强模型能否突破 flash 解决不了的题」。
+# 其余配置与 A0 完全相同（同 scaffold / 同 step_limit / 同观测截断）。
+model:
+  model_name: openai/deepseek-v4-pro
