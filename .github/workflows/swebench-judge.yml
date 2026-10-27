@@ -23,7 +23,7 @@ jobs:
     outputs:
       instances: ${{ steps.l.outputs.instances }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: l
         env:
           SUBSET: ${{ inputs.subset }}
@@ -44,7 +44,7 @@ jobs:
       matrix:
         instance: ${{ fromJson(needs.plan.outputs.instances) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Free disk space
         run: |
