@@ -159,7 +159,7 @@ jobs:
             -f ref=main \
             -f "inputs[arm]=${{ inputs.arm }}" \
             -f "inputs[preds]=preds/${{ inputs.arm }}.jsonl" \
-            -f "inputs[subset]=bench/sample_lite36.json"
+            -f "inputs[subset]=${{ inputs.subset }}"
 
   # 接力：本 arm 跑完后自动触发队列里的下一个 arm，直到队列为空。
   # 这样 6 组实验可以无人值守连着跑完。
