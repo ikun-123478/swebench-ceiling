@@ -1,0 +1,33 @@
+name: orchestrator
+# 每 15 分钟巡检一次：补 preds → 串行触发判分 → A0 判分齐后触发 pro-on-failures → 生成报告。
+# 全部逻辑在 .github/scripts/orchestrate.py，靠仓库文件存在性保证幂等。
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: orchestrator
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run orchestrator
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/scripts/orchestrate.py
