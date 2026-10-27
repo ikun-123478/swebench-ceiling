@@ -22,7 +22,7 @@ on:
         default: ""
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 jobs:
@@ -115,6 +115,51 @@ jobs:
             out/${{ inputs.arm }}/${{ matrix.instance }}/*.traj.json
           if-no-files-found: warn
           retention-days: 14
+
+  # 汇总：把本 run 所有实例的 preds 合并成 preds/<arm>.jsonl 并提交，然后自动触发判分。
+  collect:
+    needs: run
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pred-${{ inputs.arm }}-*
+          path: arts
+      - name: Merge predictions
+        env:
+          ARM: ${{ inputs.arm }}
+        run: |
+          python3 - <<'PY'
+          import glob, json, os
+          arm = os.environ["ARM"]
+          merged = {}
+          for p in glob.glob("arts/**/preds.json", recursive=True):
+              merged.update(json.load(open(p)))
+          os.makedirs("preds", exist_ok=True)
+          with open(f"preds/{arm}.jsonl", "w", encoding="utf-8") as f:
+              for v in merged.values():
+                  f.write(json.dumps(v, ensure_ascii=False) + "\n")
+          empty = sum(1 for v in merged.values() if not (v.get("model_patch") or "").strip())
+          print(f"{arm}: {len(merged)} 个预测，空补丁 {empty} 个")
+          PY
+      - name: Commit predictions
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git add preds
+          git commit -m "data(${{ inputs.arm }}): merged predictions" || echo "no change"
+          git push || echo "push skipped"
+      - name: Dispatch judge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/actions/workflows/swebench-judge.yml/dispatches" \
+            -f ref=main \
+            -f "inputs[arm]=${{ inputs.arm }}" \
+            -f "inputs[preds]=preds/${{ inputs.arm }}.jsonl" \
+            -f "inputs[subset]=bench/sample_lite36.json"
 
   # 接力：本 arm 跑完后自动触发队列里的下一个 arm，直到队列为空。
   # 这样 6 组实验可以无人值守连着跑完。
