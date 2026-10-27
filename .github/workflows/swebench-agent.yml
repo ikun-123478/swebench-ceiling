@@ -31,7 +31,7 @@ jobs:
     outputs:
       instances: ${{ steps.l.outputs.instances }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: l
         env:
           SUBSET: ${{ inputs.subset }}
@@ -52,7 +52,7 @@ jobs:
       matrix:
         instance: ${{ fromJson(needs.plan.outputs.instances) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # runner 默认只有 ~14GB，删掉预装的大件腾出 ~25GB（matplotlib 这类镜像解压后很占地方）
       - name: Free disk space
@@ -122,7 +122,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           pattern: pred-${{ inputs.arm }}-*
