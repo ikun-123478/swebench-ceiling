@@ -1,0 +1,98 @@
+{
+  "dataset": "princeton-nlp/SWE-bench_Lite",
+  "split": "test",
+  "n": 8,
+  "selection_rule": "A0(flash) 判分未通过的实例",
+  "instance_ids": [
+    "astropy__astropy-14365",
+    "pallets__flask-4045",
+    "pallets__flask-4992",
+    "psf__requests-2148",
+    "psf__requests-2674",
+    "pydata__xarray-4493",
+    "sphinx-doc__sphinx-10451",
+    "sphinx-doc__sphinx-8282"
+  ],
+  "filter_regex": "(astropy__astropy\\-14365|pallets__flask\\-4045|pallets__flask\\-4992|psf__requests\\-2148|psf__requests\\-2674|pydata__xarray\\-4493|sphinx\\-doc__sphinx\\-10451|sphinx\\-doc__sphinx\\-8282)",
+  "repos": [
+    "astropy/astropy",
+    "pallets/flask",
+    "psf/requests",
+    "pydata/xarray",
+    "sphinx-doc/sphinx"
+  ],
+  "rows": [
+    {
+      "instance_id": "astropy__astropy-14365",
+      "repo": "astropy/astropy",
+      "base_commit": "7269fa3e33e8d02485a647da91a5a2a60a06af61",
+      "gold_patch_chars": 955,
+      "problem_chars": 1339,
+      "n_fail_to_pass": 1,
+      "n_pass_to_pass": 8
+    },
+    {
+      "instance_id": "pallets__flask-4045",
+      "repo": "pallets/flask",
+      "base_commit": "d8c37f43724cd9fb0870f77877b7c4c7e38a19e0",
+      "gold_patch_chars": 1449,
+      "problem_chars": 230,
+      "n_fail_to_pass": 2,
+      "n_pass_to_pass": 50
+    },
+    {
+      "instance_id": "pallets__flask-4992",
+      "repo": "pallets/flask",
+      "base_commit": "4c288bc97ea371817199908d0d9b12de9dae327e",
+      "gold_patch_chars": 1664,
+      "problem_chars": 1135,
+      "n_fail_to_pass": 1,
+      "n_pass_to_pass": 18
+    },
+    {
+      "instance_id": "psf__requests-2148",
+      "repo": "psf/requests",
+      "base_commit": "fe693c492242ae532211e0c173324f09ca8cf227",
+      "gold_patch_chars": 1059,
+      "problem_chars": 2311,
+      "n_fail_to_pass": 10,
+      "n_pass_to_pass": 118
+    },
+    {
+      "instance_id": "psf__requests-2674",
+      "repo": "psf/requests",
+      "base_commit": "0be38a0c37c59c4b66ce908731da15b401655113",
+      "gold_patch_chars": 893,
+      "problem_chars": 510,
+      "n_fail_to_pass": 12,
+      "n_pass_to_pass": 142
+    },
+    {
+      "instance_id": "pydata__xarray-4493",
+      "repo": "pydata/xarray",
+      "base_commit": "a5f53e203c52a7605d5db799864046471115d04f",
+      "gold_patch_chars": 844,
+      "problem_chars": 2375,
+      "n_fail_to_pass": 1,
+      "n_pass_to_pass": 1689
+    },
+    {
+      "instance_id": "sphinx-doc__sphinx-10451",
+      "repo": "sphinx-doc/sphinx",
+      "base_commit": "195e911f1dab04b8ddeacbe04b7d214aaf81bb0b",
+      "gold_patch_chars": 1614,
+      "problem_chars": 1662,
+      "n_fail_to_pass": 2,
+      "n_pass_to_pass": 80
+    },
+    {
+      "instance_id": "sphinx-doc__sphinx-8282",
+      "repo": "sphinx-doc/sphinx",
+      "base_commit": "2c2335bbb8af99fa132e1573bbf45dc91584d5a2",
+      "gold_patch_chars": 1737,
+      "problem_chars": 817,
+      "n_fail_to_pass": 1,
+      "n_pass_to_pass": 16
+    }
+  ]
+}
